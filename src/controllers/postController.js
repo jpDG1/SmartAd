@@ -1,4 +1,11 @@
 const Post = require('../models/Post');
+const Message = require('../models/Message');
+
+const BUY_NOW_AUTO_MESSAGE =
+  'SPRZEDANE — Kup Teraz\n\n' +
+  'Ogłoszenie zostało oznaczone jako sprzedane przez kupującego (bez płatności online w aplikacji).\n\n' +
+  'Sprzedający: przygotuj paczkę i wyślij ją według uzgodnień z kupującym (nadawca lub odbiór osobisty).\n' +
+  'Kupujący: piszcie się tutaj w sprawie odbioru i potwierdzenia transakcji.';
 
 // GET /api/posts  — list with search, filter, pagination
 const getPosts = async (req, res, next) => {
@@ -14,7 +21,7 @@ const getPosts = async (req, res, next) => {
       limit = 20,
     } = req.query;
 
-    const query = { isActive: true };
+    const query = { isActive: true, sold: { $ne: true } };
 
     if (search) {
       query.$text = { $search: search };
@@ -32,7 +39,7 @@ const getPosts = async (req, res, next) => {
     const total = await Post.countDocuments(query);
 
     const posts = await Post.find(query)
-      .populate('userId', 'login avatar')
+      .populate('userId', 'login avatar ratingAverage ratingCount')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit));
@@ -51,10 +58,10 @@ const getPosts = async (req, res, next) => {
 // GET /api/posts/:id
 const getPostById = async (req, res, next) => {
   try {
-    const post = await Post.findById(req.params.id).populate('userId', 'login avatar email phone');
+    const post = await Post.findById(req.params.id).populate('userId', 'login avatar email phone ratingAverage ratingCount');
 
     if (!post || !post.isActive) {
-      return res.status(404).json({ message: 'Post not found' });
+      return res.status(404).json({ message: 'Nie znaleziono ogłoszenia' });
     }
 
     res.json(post);
@@ -93,9 +100,9 @@ const updatePost = async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
 
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) return res.status(404).json({ message: 'Nie znaleziono ogłoszenia' });
     if (post.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ message: 'Brak uprawnień' });
     }
 
     const { title, description, price, condition, category, location } = req.body;
@@ -121,15 +128,15 @@ const deletePost = async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
 
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) return res.status(404).json({ message: 'Nie znaleziono ogłoszenia' });
     if (post.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ message: 'Brak uprawnień' });
     }
 
     post.isActive = false; // soft delete
     await post.save();
 
-    res.json({ message: 'Post deleted' });
+    res.json({ message: 'Ogłoszenie usunięte' });
   } catch (error) {
     next(error);
   }
@@ -145,4 +152,62 @@ const getMyPosts = async (req, res, next) => {
   }
 };
 
-module.exports = { getPosts, getPostById, createPost, updatePost, deletePost, getMyPosts };
+// POST /api/posts/:id/buy-now-stub — kupujący oznacza sprzedaż + pierwsza wiadomość do sprzedawcy
+const buyNowStub = async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post || !post.isActive) {
+      return res.status(404).json({ message: 'Nie znaleziono ogłoszenia' });
+    }
+    if (post.sold) {
+      return res.status(400).json({ message: 'To ogłoszenie jest już sprzedane' });
+    }
+
+    const sellerId = post.userId.toString();
+    if (sellerId === req.user._id.toString()) {
+      return res.status(403).json({ message: 'Nie możesz kupić własnego ogłoszenia' });
+    }
+
+    post.sold = true;
+    post.soldTo = req.user._id;
+    post.soldAt = new Date();
+    await post.save();
+
+    await Message.create({
+      senderId: req.user._id,
+      receiverId: post.userId,
+      postId: post._id,
+      content: BUY_NOW_AUTO_MESSAGE,
+      isPlatform: true,
+    });
+
+    const populated = await Post.findById(post._id).populate(
+      'userId',
+      'login avatar email phone ratingAverage ratingCount'
+    );
+
+    const seller = populated.userId;
+    res.status(200).json({
+      post: populated,
+      seller: seller
+        ? {
+            _id: seller._id,
+            login: seller.login,
+            avatar: seller.avatar,
+          }
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  getPosts,
+  getPostById,
+  createPost,
+  updatePost,
+  deletePost,
+  getMyPosts,
+  buyNowStub,
+};

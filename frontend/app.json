@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Bazarek",
+    "slug": "bazarek",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ffffff",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bazarek.mobile"
+    },
+    "android": {
+      "package": "com.bazarek.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Bazarek potrzebuje dostępu do zdjęć, aby dodać zdjęcia profilowe i ogłoszenia."
+        }
+      ]
+    ]
+  }
+}

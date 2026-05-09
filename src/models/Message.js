@@ -19,12 +19,17 @@ const messageSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: [true, 'Message content is required'],
+      required: [true, 'Treść wiadomości jest wymagana'],
       maxlength: 1000,
     },
     isRead: {
       type: Boolean,
       default: false,
+    },
+    isPlatform: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
   },
   { timestamps: true }

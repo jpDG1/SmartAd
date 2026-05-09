@@ -13,7 +13,7 @@ const register = async (req, res, next) => {
     const { login, email, phone, password } = req.body;
 
     if (!login || !email || !password) {
-      return res.status(400).json({ message: 'login, email and password are required' });
+      return res.status(400).json({ message: 'Login, e-mail i hasło są wymagane' });
     }
 
     const user = await User.create({ login, email, phone, password });
@@ -27,6 +27,8 @@ const register = async (req, res, next) => {
         email: user.email,
         phone: user.phone,
         avatar: user.avatar,
+        ratingAverage: user.ratingAverage ?? null,
+        ratingCount: user.ratingCount ?? 0,
       },
     });
   } catch (error) {
@@ -40,7 +42,7 @@ const login = async (req, res, next) => {
     const { identifier, password } = req.body; // identifier = login/email/phone
 
     if (!identifier || !password) {
-      return res.status(400).json({ message: 'Identifier and password are required' });
+      return res.status(400).json({ message: 'Identyfikator i hasło są wymagane' });
     }
 
     const user = await User.findOne({
@@ -52,7 +54,7 @@ const login = async (req, res, next) => {
     }).select('+password');
 
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Nieprawidłowe dane logowania' });
     }
 
     const token = generateToken(user._id);
@@ -65,6 +67,8 @@ const login = async (req, res, next) => {
         email: user.email,
         phone: user.phone,
         avatar: user.avatar,
+        ratingAverage: user.ratingAverage ?? null,
+        ratingCount: user.ratingCount ?? 0,
       },
     });
   } catch (error) {
@@ -72,17 +76,26 @@ const login = async (req, res, next) => {
   }
 };
 
-// GET /api/auth/me
-const getMe = async (req, res) => {
-  const user = req.user;
-  res.json({
-    id: user._id,
-    login: user.login,
-    email: user.email,
-    phone: user.phone,
-    avatar: user.avatar,
-    createdAt: user.createdAt,
-  });
+// GET /api/auth/me — zawsze świeży odczyt z bazy (req.user jest z początku żądania)
+const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(401).json({ message: 'Nie znaleziono użytkownika' });
+    }
+    res.json({
+      id: user._id,
+      login: user.login,
+      email: user.email,
+      phone: user.phone,
+      avatar: user.avatar,
+      ratingAverage: user.ratingAverage ?? null,
+      ratingCount: user.ratingCount ?? 0,
+      createdAt: user.createdAt,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = { register, login, getMe };

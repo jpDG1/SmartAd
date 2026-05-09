@@ -5,18 +5,18 @@ const userSchema = new mongoose.Schema(
   {
     login: {
       type: String,
-      required: [true, 'Login is required'],
+      required: [true, 'Login jest wymagany'],
       unique: true,
       trim: true,
       minlength: 3,
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
+      required: [true, 'E-mail jest wymagany'],
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Invalid email format'],
+      match: [/^\S+@\S+\.\S+$/, 'Nieprawidłowy format e-mail'],
     },
     phone: {
       type: String,
@@ -25,13 +25,28 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: [true, 'Hasło jest wymagane'],
       minlength: 6,
       select: false,
     },
     avatar: {
       type: String,
       default: null,
+    },
+    ratingAverage: {
+      type: Number,
+      default: null,
+      min: 1,
+      max: 5,
+    },
+    ratingCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    favorites: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
+      default: [],
     },
   },
   { timestamps: true }

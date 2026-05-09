@@ -1,7 +1,7 @@
 {
   "name": "smartad-backend",
   "version": "1.0.0",
-  "description": "Backend for SmartAd mobile app",
+  "description": "Backend aplikacji mobilnej SmartAd (lokalne ogłoszenia)",
   "main": "src/index.js",
   "scripts": {
     "test": "jest --runInBand --forceExit",
