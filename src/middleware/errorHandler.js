@@ -10,7 +10,7 @@ const errorHandler = (err, req, res, next) => {
   // Mongoose duplicate key error
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
-    return res.status(400).json({ message: `${field} already exists` });
+    return res.status(400).json({ message: `Pole jest już zajęte: ${field}` });
   }
 
   // Multer error
@@ -19,7 +19,7 @@ const errorHandler = (err, req, res, next) => {
   }
 
   res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
+    message: err.message || 'Wewnętrzny błąd serwera',
   });
 };
 

@@ -4,24 +4,55 @@ const Message = require('../models/Message');
 const getConversations = async (req, res, next) => {
   try {
     const userId = req.user._id;
+    const mongoose = require('mongoose');
+    const me = new mongoose.Types.ObjectId(userId);
 
     const conversations = await Message.aggregate([
       {
         $match: {
-          $or: [{ senderId: userId }, { receiverId: userId }],
+          $or: [{ senderId: me }, { receiverId: me }],
         },
       },
       { $sort: { createdAt: -1 } },
       {
+        $addFields: {
+          otherUserId: {
+            $cond: [{ $eq: ['$senderId', me] }, '$receiverId', '$senderId'],
+          },
+          conversationKey: {
+            $concat: [
+              { $toString: '$postId' },
+              '_',
+              {
+                $toString: {
+                  $cond: [{ $eq: ['$senderId', me] }, '$receiverId', '$senderId'],
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
         $group: {
-          _id: '$postId',
+          _id: '$conversationKey',
+          postId: { $first: '$postId' },
+          otherUserId: { $first: '$otherUserId' },
           lastMessage: { $first: '$$ROOT' },
+          unread: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$receiverId', me] }, { $eq: ['$isRead', false] }] },
+                1,
+                0,
+              ],
+            },
+          },
         },
       },
       {
         $lookup: {
           from: 'posts',
-          localField: '_id',
+          localField: 'postId',
           foreignField: '_id',
           as: 'post',
         },
@@ -30,12 +61,19 @@ const getConversations = async (req, res, next) => {
       {
         $lookup: {
           from: 'users',
-          localField: 'lastMessage.senderId',
+          localField: 'otherUserId',
           foreignField: '_id',
-          as: 'sender',
+          as: 'otherUser',
         },
       },
-      { $unwind: '$sender' },
+      { $unwind: '$otherUser' },
+      {
+        $project: {
+          'otherUser.password': 0,
+          'otherUser.favorites': 0,
+        },
+      },
+      { $sort: { 'lastMessage.createdAt': -1 } },
     ]);
 
     res.json(conversations);
@@ -78,11 +116,11 @@ const sendMessage = async (req, res, next) => {
     const { receiverId, postId, content } = req.body;
 
     if (!receiverId || !postId || !content) {
-      return res.status(400).json({ message: 'receiverId, postId and content are required' });
+      return res.status(400).json({ message: 'Wymagane dane: odbiorca, ogłoszenie i treść wiadomości' });
     }
 
     if (receiverId === req.user._id.toString()) {
-      return res.status(400).json({ message: 'Cannot message yourself' });
+      return res.status(400).json({ message: 'Nie możesz wysłać wiadomości do siebie' });
     }
 
     const message = await Message.create({

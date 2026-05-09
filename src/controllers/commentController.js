@@ -19,10 +19,10 @@ const addComment = async (req, res, next) => {
   try {
     const { text } = req.body;
 
-    if (!text) return res.status(400).json({ message: 'Text is required' });
+    if (!text) return res.status(400).json({ message: 'Treść jest wymagana' });
 
     const post = await Post.findById(req.params.postId);
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) return res.status(404).json({ message: 'Nie znaleziono ogłoszenia' });
 
     const comment = await Comment.create({
       text,
@@ -42,13 +42,13 @@ const deleteComment = async (req, res, next) => {
   try {
     const comment = await Comment.findById(req.params.commentId);
 
-    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+    if (!comment) return res.status(404).json({ message: 'Nie znaleziono komentarza' });
     if (comment.userId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ message: 'Brak uprawnień' });
     }
 
     await comment.deleteOne();
-    res.json({ message: 'Comment deleted' });
+    res.json({ message: 'Komentarz usunięty' });
   } catch (error) {
     next(error);
   }

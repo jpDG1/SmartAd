@@ -83,7 +83,71 @@ describe('Posts API', () => {
     it('should delete own post', async () => {
       const res = await request(app).delete(`/api/posts/${createdPostId}`).set('Authorization', `Bearer ${authToken}`);
       expect(res.statusCode).toBe(200);
-      expect(res.body.message).toBe('Post deleted');
+      expect(res.body.message).toBe('Ogłoszenie usunięte');
+    });
+  });
+
+  describe('POST /api/posts/:id/buy-now-stub', () => {
+    let sellerToken;
+    let buyerToken;
+    let listingId;
+    const id = `${Date.now()}`;
+    const seller = {
+      login: `sell_${id}`,
+      email: `sell_${id}@test.com`,
+      password: 'secret123',
+    };
+    const buyer = {
+      login: `buy_${id}`,
+      email: `buy_${id}@test.com`,
+      password: 'secret123',
+    };
+
+    beforeAll(async () => {
+      await request(app).post('/api/auth/register').send(seller);
+      sellerToken = (
+        await request(app).post('/api/auth/login').send({ identifier: seller.email, password: seller.password })
+      ).body.token;
+
+      await request(app).post('/api/auth/register').send(buyer);
+      buyerToken = (
+        await request(app).post('/api/auth/login').send({ identifier: buyer.email, password: buyer.password })
+      ).body.token;
+
+      const cre = await request(app)
+        .post('/api/posts')
+        .set('Authorization', `Bearer ${sellerToken}`)
+        .field('title', 'Item to buy')
+        .field('description', 'Nice item')
+        .field('price', 99)
+        .field('condition', 'used')
+        .field('category', 'other')
+        .field('location', 'Kraków');
+
+      listingId = cre.body._id;
+    });
+
+    it('should forbid seller buying own listing', async () => {
+      const res = await request(app)
+        .post(`/api/posts/${listingId}/buy-now-stub`)
+        .set('Authorization', `Bearer ${sellerToken}`);
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('should mark sold and accept buyer purchase', async () => {
+      const res = await request(app)
+        .post(`/api/posts/${listingId}/buy-now-stub`)
+        .set('Authorization', `Bearer ${buyerToken}`);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.post.sold).toBe(true);
+      expect(res.body.seller.login).toBe(seller.login);
+    });
+
+    it('should reject second purchase', async () => {
+      const res = await request(app)
+        .post(`/api/posts/${listingId}/buy-now-stub`)
+        .set('Authorization', `Bearer ${buyerToken}`);
+      expect(res.statusCode).toBe(400);
     });
   });
 

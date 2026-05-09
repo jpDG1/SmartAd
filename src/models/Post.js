@@ -4,18 +4,18 @@ const postSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: [true, 'Title is required'],
+      required: [true, 'Tytuł jest wymagany'],
       trim: true,
       maxlength: 100,
     },
     description: {
       type: String,
-      required: [true, 'Description is required'],
+      required: [true, 'Opis jest wymagany'],
       maxlength: 2000,
     },
     price: {
       type: Number,
-      required: [true, 'Price is required'],
+      required: [true, 'Cena jest wymagana'],
       min: 0,
     },
     condition: {
@@ -25,7 +25,7 @@ const postSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      required: [true, 'Category is required'],
+      required: [true, 'Kategoria jest wymagana'],
       enum: [
         'electronics',
         'clothing',
@@ -38,7 +38,7 @@ const postSchema = new mongoose.Schema(
     },
     location: {
       type: String,
-      required: [true, 'Location is required'],
+      required: [true, 'Lokalizacja jest wymagana'],
       trim: true,
     },
     images: {
@@ -53,6 +53,20 @@ const postSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    sold: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    soldTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    soldAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

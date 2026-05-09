@@ -7,6 +7,7 @@ const {
   updatePost,
   deletePost,
   getMyPosts,
+  buyNowStub,
 } = require('../controllers/postController');
 const { getComments, addComment, deleteComment } = require('../controllers/commentController');
 const { protect } = require('../middleware/auth');
@@ -15,6 +16,7 @@ const upload = require('../middleware/upload');
 // Public
 router.get('/', getPosts);
 router.get('/my', protect, getMyPosts);
+router.post('/:id/buy-now-stub', protect, buyNowStub);
 router.get('/:id', getPostById);
 
 // Protected
